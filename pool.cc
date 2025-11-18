@@ -35,7 +35,7 @@ void ThreadPool::SubmitTask(const std::string &name, Task *task) {
         std::lock_guard<std::mutex> lg(mtx);
 
         if (done) {
-            std::cout << "Can't submit after stop" << std::endl;
+            std::cout << "Cannot added task to queue" << std::endl;
             return;
         }
 
@@ -44,6 +44,8 @@ void ThreadPool::SubmitTask(const std::string &name, Task *task) {
         task->name = name;
         task_done[name] = false;
         task_cv[name] = new std::condition_variable();
+
+        std::cout << "Added task" << std::endl;
     }
     cv.notify_one();
 }
@@ -58,16 +60,21 @@ void ThreadPool::run_thread() {
 
             cv.wait(ul, [this]{ return done || !queue.empty(); });
 
-            if (done && queue.empty()) return; 
+            if (done && queue.empty()) {
+                std::cout << "Stopping thread" << std::endl;
+                return; 
+            }
 
             task = queue.front();
             queue.erase(queue.begin());
             task_name = task->name;
             tasks_running++;
+            std::cout << "Started task" << std::endl;
         }
 
         try {
             task->Run();
+            std::cout << "Finished task" << std::endl;
         } catch (...) {}
 
         {
@@ -100,6 +107,7 @@ void ThreadPool::remove_task(Task *t) {
 }
 
 void ThreadPool::Stop() {
+    std::cout << "Called Stop()" << std::endl;
     {
         std::lock_guard<std::mutex> lg(mtx);
         done = true;
@@ -107,11 +115,9 @@ void ThreadPool::Stop() {
 
     cv.notify_all();
     
-    std::cout << "Joining threads" << std::endl;
     for (auto* t : threads) {
         if (t && t->joinable()) t->join();
     }
-    std::cout << "threads joined" << std::endl;
 }
 
 void ThreadPool::WaitForTask(const std::string &name) {
