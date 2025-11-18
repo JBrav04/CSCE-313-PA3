@@ -4,6 +4,8 @@
 #include <mutex>
 #include <condition_variable>
 #include <semaphore>
+#include <unordered_map>
+#include <atomic>
 
 class Task {
 public:
@@ -33,6 +35,7 @@ public:
     void Stop();
 
     void run_thread();
+    void WaitForTask(const std::string &name);
 
     int num_tasks_unserviced = 0;
 private:
@@ -40,4 +43,10 @@ private:
     std::vector<std::thread *> threads;
     std::vector<Task *> queue;
     volatile bool done = false;
+    std::condition_variable cv;
+
+    std::unordered_map<std::string, bool> task_done;
+    std::unordered_map<std::string, std::condition_variable*> task_cv;
+    //std::atomic<int> tasks_running{0};
+    int tasks_running = 0;
 };
